@@ -1,94 +1,109 @@
-DROP TABLE IF EXISTS BP
+DROP TABLE IF EXISTS BPinput
 ; 
-CREATE TABLE BP (
-  DateTaken      date,
-  TimeTaken      time,
-  LeftSystolic   integer,
-  LeftDiastolic  integer,
-  LeftPulse      integer,
-  LeftIrrHeart   varchar(3),
-  RightSystolic  integer,
-  RigtDiastolic  integer,
-  RightPulse     integer,
-  RightIrrHeart  varchar(3),
-  Exercise	 varchar,
-  Note           varchar
+CREATE TABLE BPinput (
+  MeasurementDate     date    not null,
+  LeftSystolicReading integer not null
 );
 
 
-COPY BP FROM './input/BPdata.csv' (AUTO_DETECT TRUE)
+COPY BPinput FROM './input/BPdata.csv' (AUTO_DETECT TRUE)
+;
+
+
+DROP VIEW IF EXISTS BP
+;
+CREATE VIEW BP AS (
+  SELECT 
+  MeasurementDate     AS DateTaken,
+  LeftSystolicReading AS LeftSystolic
+  FROM BPinput)
+;
+
+
+DROP VIEW IF EXISTS BPStartDate
+;
+CREATE VIEW BPStartDate AS 
+  SELECT Min(DateTaken) AS StartDate
+  FROM BP
 ;
 
 
 DROP VIEW IF EXISTS BPWeek
 ;
-CREATE VIEW BPWeek as 
-  select *, CAST(((DateTaken - Date '2023-01-27')/7)+1 as integer) as WeekSinceAblation from BP;
+CREATE VIEW BPWeek AS 
+  SELECT *, CAST(((DateTaken - (SELECT StartDate FROM BPStartDate))/7) AS integer) AS WeekSinceAnchor from BP;
 
 
 DROP VIEW IF EXISTS BPweeklyTotalsGross
 ;
 CREATE VIEW BPweeklyTotalsGross AS
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as NormalLower
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Low
   FROM   BPweek
-  WHERE  leftSystolic between 0 and 110
-         group by WeekSinceAblation 
+  WHERE  leftSystolic between 0 and 89
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Normal
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS NormalLower
+  FROM   BPweek
+  WHERE  leftSystolic between 90 and 110
+         group by WeekSinceAnchor 
+  UNION ALL BY NAME
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Normal
   FROM   BPweek
   WHERE  leftSystolic between 111 and 119
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as ElevatedLower
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS ElevatedLower
   FROM   BPweek
   WHERE  leftSystolic between 120 and 124
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Elevated
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Elevated
   FROM   BPweek
   WHERE  leftSystolic between 125 and 129
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Stage1Lower
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Stage1Lower
   FROM   BPweek
   WHERE  leftSystolic between 130 and 134
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Stage1
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Stage1
   FROM   BPweek
   WHERE  leftSystolic between 135 and 139
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Stage2Lower
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Stage2Lower
   FROM   BPweek
   WHERE  leftSystolic between 140 and 144
-         group by WeekSinceAblation 
+         group by WeekSinceAnchor 
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Stage2
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Stage2
   FROM   BPweek
   WHERE  leftSystolic between 145 and 149
-         group by WeekSinceAblation
+         group by WeekSinceAnchor
   UNION ALL BY NAME
-  SELECT WeekSinceAblation,
-         count(leftSystolic) as Stage2High
+  SELECT WeekSinceAnchor,
+         count(leftSystolic) AS Stage2High
   FROM   BPweek
   WHERE  leftSystolic > 149
-         group by WeekSinceAblation
+         group by WeekSinceAnchor
 ;
 
 
 DROP VIEW IF EXISTS BPweeklyTotalsByStage
 ;
 CREATE VIEW BPweeklyTotalsByStage AS
-  SELECT BPW.WeekSinceAblation,
+  SELECT BPW.WeekSinceAnchor,
+         LW.Low,
          NL.NormalLower,
           N.Normal,
          EL.ElevatedLower,
@@ -98,37 +113,43 @@ CREATE VIEW BPweeklyTotalsByStage AS
         S2L.Stage2Lower, 
          S2.Stage2, 
          S2.Stage2High, 
-  FROM (select WeekSinceAblation 
+  FROM (SELECT WeekSinceAnchor 
         from BPweek
-        group by WeekSinceAblation) AS BPW
+        group by WeekSinceAnchor)   AS BPW
+  LEFT JOIN BPweeklyTotalsGross     AS LW
+        on  BPW.WeekSinceAnchor = LW.WeekSinceAnchor
+        and LW.Low not null
   LEFT JOIN BPweeklyTotalsGross     AS NL
-        on  BPW.WeeksinceAblation = NL.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = NL.WeekSinceAnchor
         and NL.NormalLower not null
   LEFT JOIN BPweeklyTotalsGross     AS N
-        on  BPW.WeeksinceAblation = N.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = N.WeekSinceAnchor
         and N.Normal not null
   LEFT JOIN BPweeklyTotalsGross     AS EL 
-        on  BPW.WeeksinceAblation = EL.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = EL.WeekSinceAnchor
         and EL.ElevatedLower not null
   LEFT JOIN BPweeklyTotalsGross     AS E 
-        on  BPW.WeeksinceAblation = E.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = E.WeekSinceAnchor
         and E.Elevated not null
   LEFT JOIN BPweeklyTotalsGross     AS S1L 
-        on  BPW.WeeksinceAblation = S1L.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = S1L.WeekSinceAnchor
         and S1L.Stage1Lower not null
   LEFT JOIN BPweeklyTotalsGross     AS S1 
-        on  BPW.WeeksinceAblation = S1.WeeksinceAblation
+        on  BPW.WeekSinceAnchor = S1.WeekSinceAnchor
         and S1.Stage1 not null
   LEFT JOIN BPweeklyTotalsGross     AS S2L 
-        on  BPW.WeeksinceAblation = S2L.WeeksinceAblation
-        and S1L.Stage2Lower not null
+        on  BPW.WeekSinceAnchor = S2L.WeekSinceAnchor
+        and S2L.Stage2Lower not null
   LEFT JOIN BPweeklyTotalsGross     AS S2 
-        on  BPW.WeeksinceAblation = S2.WeeksinceAblation
-        and S1.Stage2 not null
+        on  BPW.WeekSinceAnchor = S2.WeekSinceAnchor
+        and S2.Stage2 not null
   LEFT JOIN BPweeklyTotalsGross     AS S2H 
-        on  BPW.WeeksinceAblation = S2H.WeeksinceAblation
-        and S1.Stage2High not null
+        on  BPW.WeekSinceAnchor = S2H.WeekSinceAnchor
+        and S2H.Stage2High not null
 ;
 
-COPY (SELECT * FROM BPweeklyTotalsByStage ORDER BY WeeksinceAblation) TO './output/BPreport.csv'
-     (FORMAT CSV, HEADER);
+COPY (SELECT * FROM BPweeklyTotalsByStage
+      ORDER BY WeekSinceAnchor)
+  TO './output/BPreport.csv'
+     (FORMAT CSV, HEADER)
+;

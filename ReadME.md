@@ -1,7 +1,7 @@
 ## Blood Pressure Reports
 Provides a means to convert and perform an analysis of a CSV input file of blood pressure readings.  The analysis data is then converted into an output  CSV format that can be easily consumed by a google spreadsheet chart, such as a stacked bar chart, to depict the analytics.  
 All reports conform to a general format.  This general format is explained by the [Reporting Framework](#reporting-framework) section. 
-### Left Systolic Blood Pressure counts by Week
+### Left Systolic Blood Pressure Counts by Week
 Show the percentage of Left Systolic daily blood pressure readings aggregrated by week according to [AMA blood pressure categories](https://targetbp.org/best-practices/guidelines17/).  The analytical output CSV format conforms to Google Sheet's vertically stacked bar chart.
 #### input
 Supplied as CSV formatted file as filepath named ```./input/BPdata.csv```.  This file should contain rows with the following column values:

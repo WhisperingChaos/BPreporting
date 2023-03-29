@@ -69,7 +69,7 @@ Supplies the blood pressure readings in an CSV formated file expected by the rep
   + The file must be named BPdata.csv
   + The file's CSV format must conform to the desired input reporting format.
 #### etl process
-The transform process that converts the BPData into a form needed by either the next step in the etl process or the desired final output format.  For example, the report [Left Systolic Blood Pressure counts by Week](#left-systolic-blood-pressure-counts-by-week) converts its BPdata.csv file into an output CSV file that can easily be consumed by Google Sheet's Graph tool to quickly generate a stacked bar chart.
+The transform process that converts the BPdata.csv into a form needed by either the next step in the etl process or the desired final output format.  For example, the report [Left Systolic Blood Pressure counts by Week](#left-systolic-blood-pressure-counts-by-week) converts its BPdata.csv file into an output CSV file that can easily be consumed by Google Sheet's Graph tool to quickly generate a stacked bar chart.
 The etl process employs SQL to program its transforms.  Use SQL VIEWs to create a layered set of transforms to encode the desired conversion from input to output.  One could also create a transform pipeline by feeding the
 output of one etl process to into the input of another one. 
 #### output

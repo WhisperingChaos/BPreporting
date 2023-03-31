@@ -148,7 +148,25 @@ CREATE VIEW BPweeklyTotalsByStage AS
         and S2H.Stage2High not null
 ;
 
-COPY (SELECT * FROM BPweeklyTotalsByStage
+DROP VIEW IF EXISTS BPweeklyTotalsByStageNullAsZero
+;
+CREATE VIEW BPweeklyTotalsByStageNullAsZero AS
+  SELECT WeekSinceAnchor,
+         coalesce(Low,'0')           AS Low,
+         coalesce(NormalLower,'0')   AS NormalLower,
+         coalesce(Normal,'0')        AS Normal,
+         coalesce(ElevatedLower,'0') AS ElevatedLower,
+         coalesce(Elevated,'0')      AS Elevated,
+         coalesce(Stage1Lower,'0')   AS Stage1Lower,
+         coalesce(Stage1,'0')        AS Stage1,
+         coalesce(Stage2Lower,'0')   AS Stage2Lower,
+         coalesce(Stage2,'0')        AS Stage2,
+         coalesce(Stage2High,'0')    AS Stage2High
+  FROM BPweeklyTotalsByStage
+;
+
+
+COPY (SELECT * FROM BPweeklyTotalsByStageNullAsZero
       ORDER BY WeekSinceAnchor)
   TO './output/BPreport.csv'
      (FORMAT CSV, HEADER)
